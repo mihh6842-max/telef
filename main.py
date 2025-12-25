@@ -7,6 +7,10 @@ import pandas as pd
 import os
 from datetime import datetime
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+import sqlite3
+
+conn = sqlite3.connect('database.db')
+cursor = conn.cursor()
 
 # Настройка логирования
 logging.basicConfig(
