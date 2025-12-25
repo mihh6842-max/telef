@@ -1,0 +1,8 @@
+python-telegram-bot
+python-telegram-bot
+telegram
+telebot
+aiogram
+pysqlite3
+pandas
+openpyxl
