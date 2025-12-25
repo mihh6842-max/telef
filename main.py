@@ -9,9 +9,6 @@ from datetime import datetime
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import sqlite3
 
-conn = sqlite3.connect('database.db')
-cursor = conn.cursor()
-
 # Настройка логирования
 logging.basicConfig(
     filename='bot.log',
@@ -44,7 +41,7 @@ DEFAULT_PHOTOS = {
 }
 
 # Формат для копируемого текста
-COPYABLE_TEXT = "`{text}`"  # Markdown формат для копирования
+COPYABLE_TEXT = "{text}"  # ✅ ПРАВИЛЬНО
 
 START_MESSAGE = "🌟 Добро пожаловать в наш сервис!\n👇 Выберите нужный раздел:"
 SUPPORT_MESSAGE = "💬 Поддержка\n\nВыберите категорию вашего вопроса:"
@@ -1736,7 +1733,7 @@ def handle_edit_social(message):
             del admin_states[user_id]
 
 # Запуск бота
-if __name__ == "__main__":
+if __name__ == "__main__":  # ✅ ПРАВИЛЬНО
     logger.info("Бот успешно запущен!")
     logger.info(f"Администраторы: {ADMINS}")
     bot.infinity_polling()
