@@ -182,6 +182,21 @@ def init_db():
         setting_value TEXT
     )
     ''')
+
+    # Таблица администраторов
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS admins (
+        user_id INTEGER PRIMARY KEY
+    )
+    ''')
+
+    # Добавляем стандартных админов если таблица пуста
+    cursor.execute("SELECT COUNT(*) FROM admins")
+    if cursor.fetchone()[0] == 0:
+        for admin_id in ADMINS:
+            cursor.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (admin_id,))
+
+    conn.commit()
     
     # Добавляем столбец giveaway_id в таблицу iphone_participants если его нет
     cursor.execute("PRAGMA table_info(iphone_participants)")
@@ -386,10 +401,24 @@ def is_user_subscribed(user_id):
         return False
 
 def is_admin(user_id):
-    return user_id in ADMINS
+    cursor.execute("SELECT 1 FROM admins WHERE user_id = ?", (user_id,))
+    return cursor.fetchone() is not None
 
 def get_all_users_except_admins():
-    cursor.execute("SELECT user_id FROM users WHERE user_id NOT IN ({})".format(','.join('?' * len(ADMINS))), ADMINS)
+    cursor.execute("SELECT user_id FROM users WHERE user_id NOT IN (SELECT user_id FROM admins)")
+    return [row[0] for row in cursor.fetchall()]
+
+def add_admin(user_id):
+    try:
+        cursor.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (user_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка добавления админа {user_id}: {str(e)}")
+        return False
+
+def get_all_admins():
+    cursor.execute("SELECT user_id FROM admins")
     return [row[0] for row in cursor.fetchall()]
 
 # Функция для экспорта данных в Excel
@@ -583,6 +612,9 @@ def admin_keyboard():
     keyboard.add(
         InlineKeyboardButton("📢 Рассылка", callback_data="admin_broadcast"),
         InlineKeyboardButton("⚙️ Редактировать бота", callback_data="bot_editor")
+    )
+    keyboard.add(
+        InlineKeyboardButton("👑 Добавить админа", callback_data="admin_add_admin")
     )
     keyboard.add(InlineKeyboardButton("🔙 Назад в меню", callback_data="back"))
     return keyboard
@@ -1021,11 +1053,11 @@ def handle_callback(call):
             return
             
         cursor.execute('''
-        SELECT u.user_id, u.username 
+        SELECT u.user_id, u.username
         FROM giveaway_participants gp
         JOIN users u ON gp.user_id = u.user_id
-        WHERE u.user_id NOT IN ({})
-        '''.format(','.join('?' * len(ADMINS))), ADMINS)
+        WHERE u.user_id NOT IN (SELECT user_id FROM admins)
+        ''')
         participants = cursor.fetchall()
         
         if not participants:
@@ -1059,8 +1091,8 @@ def handle_callback(call):
         SELECT ip.user_id, u.username, ip.unique_id
         FROM iphone_participants ip
         JOIN users u ON ip.user_id = u.user_id
-        WHERE ip.user_id NOT IN ({})
-        '''.format(','.join('?' * len(ADMINS))), ADMINS)
+        WHERE ip.user_id NOT IN (SELECT user_id FROM admins)
+        ''')
         participants = cursor.fetchall()
         
         if not participants:
@@ -1474,12 +1506,26 @@ def handle_callback(call):
         }
         
         admin_states[user_id] = {"state": "editing_photo", "photo_type": photo_type}
-        
+
         safe_edit_message(
             chat_id, message_id,
             f"📸 Редактирование фото {photo_names.get(photo_type, photo_type)}\n\n"
             f"Отправьте новое фото в чат.\n"
             f"Фото должно быть в формате JPG/PNG и весить не более 20MB."
+        )
+
+    # Добавление админа
+    elif call.data == "admin_add_admin":
+        if not is_admin(user_id):
+            bot.answer_callback_query(call.id, "⛔ Доступ запрещен!")
+            return
+
+        admin_states[user_id] = {"state": "adding_admin"}
+        safe_edit_message(
+            chat_id, message_id,
+            "👑 Добавление нового администратора\n\n"
+            "Отправьте ID пользователя, которого хотите назначить администратором.\n\n"
+            "Узнать ID можно через профиль пользователя или попросив его написать /start боту."
         )
 
 # Обработчик для сообщений администратора (рассылка)
@@ -1731,8 +1777,52 @@ def handle_edit_social(message):
         if user_id in admin_states:
             del admin_states[user_id]
 
+# Обработчик добавления админа
+@bot.message_handler(content_types=['text'],
+                     func=lambda message: is_admin(message.from_user.id) and
+                     admin_states.get(message.from_user.id, {}).get("state") == "adding_admin")
+def handle_add_admin(message):
+    user_id = message.from_user.id
+
+    try:
+        new_admin_id = int(message.text.strip())
+
+        # Проверяем, не является ли уже админом
+        if is_admin(new_admin_id):
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton("🔙 В админку", callback_data="admin_back"))
+            bot.reply_to(message, f"⚠️ Пользователь {new_admin_id} уже является администратором!", reply_markup=keyboard)
+        else:
+            # Добавляем нового админа
+            if add_admin(new_admin_id):
+                keyboard = InlineKeyboardMarkup()
+                keyboard.add(InlineKeyboardButton("🔙 В админку", callback_data="admin_back"))
+
+                # Получаем список всех админов
+                all_admins = get_all_admins()
+                admin_list = ", ".join(str(a) for a in all_admins)
+
+                bot.reply_to(
+                    message,
+                    f"✅ Пользователь {new_admin_id} успешно назначен администратором!\n\n"
+                    f"Текущие администраторы: {admin_list}",
+                    reply_markup=keyboard
+                )
+                logger.info(f"Админ {user_id} добавил нового админа: {new_admin_id}")
+            else:
+                bot.reply_to(message, "❌ Ошибка при добавлении администратора")
+
+    except ValueError:
+        bot.reply_to(message, "❌ Неверный формат ID! Отправьте числовой ID пользователя.")
+        return
+
+    # Очищаем состояние
+    if user_id in admin_states:
+        del admin_states[user_id]
+
 # Запуск бота
 if __name__ == "__main__":
     logger.info("Бот успешно запущен!")
-    logger.info(f"Администраторы: {ADMINS}")
+    admin_list = get_all_admins()
+    logger.info(f"Администраторы: {admin_list}")
     bot.infinity_polling()
