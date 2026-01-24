@@ -575,8 +575,7 @@ def main_menu():
         InlineKeyboardButton("🎓 Курс в подарок", callback_data="free_course")
     ]
     row5 = [
-        InlineKeyboardButton("Мы на WB", url=WB_LINK),
-        InlineKeyboardButton("Мы на Ozon", url=OZON_LINK)
+        InlineKeyboardButton("Мы на WB", callback_data="wb_categories")
     ]
     keyboard.add(*row1)
     keyboard.add(*row2)
@@ -966,6 +965,32 @@ def handle_callback(call):
             keyboard.add(InlineKeyboardButton("✅ Проверить подписку", callback_data="check_course_subscription"))
             keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
             edit_photo_message(chat_id, message_id, "course", text, keyboard)
+
+    elif call.data == "wb_categories":
+        text = "🛒 Выберите категорию товаров:"
+        keyboard = InlineKeyboardMarkup(row_width=2)
+        keyboard.add(
+            InlineKeyboardButton("🔊 Bluetooth колонки", url="https://www.wildberries.ru/seller/250038045"),
+            InlineKeyboardButton("🎧 Наушники Tofura", url="https://www.wildberries.ru/seller/250069046")
+        )
+        keyboard.add(
+            InlineKeyboardButton("⚡ Док станции 3 в 1", url="https://www.wildberries.ru/seller/250028052"),
+            InlineKeyboardButton("🛡️ Стёкла, Wi-Fi роутеры", url="https://www.wildberries.ru/seller/250001961")
+        )
+        keyboard.add(
+            InlineKeyboardButton("📱 Держатели для тел.", url="https://www.wildberries.ru/seller/4404517"),
+            InlineKeyboardButton("🎧 Наушники AirSan", url="https://www.wildberries.ru/seller/250069046")
+        )
+        keyboard.add(
+            InlineKeyboardButton("🚗 Пуско-зарядные авто", url="https://www.wildberries.ru/seller/4404517"),
+            InlineKeyboardButton("📹 Wi-Fi камеры", url="https://www.wildberries.ru/seller/250001961")
+        )
+        keyboard.add(
+            InlineKeyboardButton("⌚ Смарт часы", url="https://www.wildberries.ru/seller/250001961"),
+            InlineKeyboardButton("🛡️ Защитные стекла", url="https://www.wildberries.ru/seller/4404517")
+        )
+        keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
+        safe_edit_message(chat_id, message_id, text, keyboard)
 
     elif call.data.startswith("giveaway_"):
         giveaway_id = int(call.data.split("_")[1])
