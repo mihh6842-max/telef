@@ -16,6 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Проверка и создание папок
+os.makedirs('images', exist_ok=True)
+os.makedirs('data', exist_ok=True)
+
 ####################################################################
 # ======================= НАСТРОЙКИ БОТА ========================= #
 ####################################################################
@@ -28,15 +32,17 @@ BONUS_AMOUNT = 100
 ADMINS = [7338817463, 8190084234]
 WB_LINK = "https://www.wildberries.ru/seller/ВАШ_МАГАЗИН"
 OZON_LINK = "https://www.ozon.ru/seller/ВАШ_МАГАЗИН"
+COURSE_LINK = "https://youtube.com/playlist?list=PLiGodEY98SDJqFsJGGEgraqCt8ZItjGE7&si=xQqsv8PNzpTpNHWM"
 
 # Настройки фотографий (по умолчанию)
 DEFAULT_PHOTOS = {
-    "start": "1.jpg",
-    "profile": "2.jpg", 
-    "socials": "3.jpg",
-    "support": "4.jpg",
-    "admin": "5.jpg",
-    "iphone": "6.jpg"
+    "start": "images/1.jpg",
+    "profile": "images/2.jpg",
+    "socials": "images/3.jpg",
+    "support": "images/4.jpg",
+    "admin": "images/5.jpg",
+    "iphone": "images/6.jpg",
+    "course": "images/8.jpg"
 }
 
 # Формат для копируемого текста
@@ -96,7 +102,7 @@ IPHONE_GIVEAWAY_INSTRUCTION = """📱 Розыгрыш iPhone за отзыв!
 ####################################################################
 
 bot = telebot.TeleBot(BOT_TOKEN)
-conn = sqlite3.connect('profiles.db', check_same_thread=False)
+conn = sqlite3.connect('data/profiles.db', check_same_thread=False)
 cursor = conn.cursor()
 
 # Состояния пользователей
@@ -220,6 +226,7 @@ def init_db():
         'photo_support': DEFAULT_PHOTOS["support"],
         'photo_admin': DEFAULT_PHOTOS["admin"],
         'photo_iphone': DEFAULT_PHOTOS["iphone"],
+        'photo_course': DEFAULT_PHOTOS["course"],
         'copyable_text': COPYABLE_TEXT,  # Сохраняем формат копирования
         'gift_first_photo': '',  # Фото для первого сообщения рассылки с подарками
         'gift_first_video': '',  # Видео для первого сообщения рассылки с подарками
@@ -565,6 +572,9 @@ def main_menu():
         InlineKeyboardButton("📱 iPhone за отзыв", callback_data="iphone_giveaway")
     ]
     row4 = [
+        InlineKeyboardButton("🎓 Курс в подарок", callback_data="free_course")
+    ]
+    row5 = [
         InlineKeyboardButton("Мы на WB", url=WB_LINK),
         InlineKeyboardButton("Мы на Ozon", url=OZON_LINK)
     ]
@@ -572,6 +582,7 @@ def main_menu():
     keyboard.add(*row2)
     keyboard.add(*row3_new)
     keyboard.add(*row4)
+    keyboard.add(*row5)
     return keyboard
 
 def back_keyboard():
@@ -934,7 +945,28 @@ def handle_callback(call):
         else:
             bot.answer_callback_query(call.id, "❌ Вы не подписаны!")
             safe_edit_message(chat_id, message_id, NOT_SUBSCRIBED_MESSAGE.format(CHANNEL_LINK=CHANNEL_LINK), earn_tokens_menu_keyboard())
-    
+
+    elif call.data == "free_course":
+        text = f"🎓 Получи бесплатный курс в подарок!\n\n📚 Для получения доступа подпишись на наш канал:\n{CHANNEL_LINK}"
+        keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton("🔗 Подписаться на канал", url=CHANNEL_LINK))
+        keyboard.add(InlineKeyboardButton("✅ Проверить подписку", callback_data="check_course_subscription"))
+        keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
+        edit_photo_message(chat_id, message_id, "course", text, keyboard)
+
+    elif call.data == "check_course_subscription":
+        if is_user_subscribed(user_id):
+            text = f"🎉 Отлично! Вы подписаны!\n\n🎓 Вот ссылка на курс:\n{COURSE_LINK}"
+            edit_photo_message(chat_id, message_id, "course", text, back_keyboard())
+        else:
+            bot.answer_callback_query(call.id, "❌ Вы не подписаны!")
+            text = f"❌ Вы не подписаны на канал!\n\nПожалуйста, подпишитесь: {CHANNEL_LINK}"
+            keyboard = InlineKeyboardMarkup()
+            keyboard.add(InlineKeyboardButton("🔗 Подписаться на канал", url=CHANNEL_LINK))
+            keyboard.add(InlineKeyboardButton("✅ Проверить подписку", callback_data="check_course_subscription"))
+            keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
+            edit_photo_message(chat_id, message_id, "course", text, keyboard)
+
     elif call.data.startswith("giveaway_"):
         giveaway_id = int(call.data.split("_")[1])
         cursor.execute("SELECT name, description, price FROM giveaways WHERE id = ?", (giveaway_id,))
