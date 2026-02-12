@@ -62,10 +62,10 @@ ADMIN_CANNOT_PARTICIPATE = "⛔ Администратор не может уч�
 
 # Настройки поддержки
 SUPPORT_CATEGORIES = {
-    "Камеры": "https://t.me/FaizFull_WB",
-    "Стекла": "https://t.me/FaizFull_WB",
-    "Держатели": "https://t.me/FaizFull_WB",
-    "Наушники": "https://t.me/FaizFull_WB"
+    "Камеры": "https://t.me/TOFURA_WB",
+    "Стекла": "https://t.me/TOFURA_WB",
+    "Держатели": "https://t.me/TOFURA_WB",
+    "Наушники": "https://t.me/TOFURA_WB"
 }
 
 SOCIAL_MEDIA = {
