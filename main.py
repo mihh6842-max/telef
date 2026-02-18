@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 import os
 from datetime import datetime
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
 
 # Настройка логирования
 logging.basicConfig(
@@ -61,12 +61,48 @@ NOT_SUBSCRIBED_MESSAGE = "❌ Вы не подписаны на канал!\n\n�
 ADMIN_CANNOT_PARTICIPATE = "⛔ Администратор не может участвовать в розыгрышах!"
 
 # Настройки поддержки
-SUPPORT_CATEGORIES = {
-    "Камеры": "https://t.me/TOFURA_WB",
-    "Стекла": "https://t.me/TOFURA_WB",
-    "Держатели": "https://t.me/TOFURA_WB",
-    "Наушники": "https://t.me/TOFURA_WB"
-}
+SUPPORT_LINK = "https://t.me/TOFURA_WB"
+
+SUPPORT_CATEGORIES = [
+    ("⌚ Смарт часы", "Добрый день!☀️ У меня вопрос по товару Смарт часы. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("📹 Видеокамеры", "Добрый день!☀️ У меня вопрос по товару Видеокамера. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🔋 ПЗУ (пуско-зарядное)", "Добрый день!☀️ У меня вопрос по товару ПЗУ(пуско-зарядное). Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🎤 Петличные микрофоны", "Добрый день!☀️ У меня вопрос по товару Петличные микрофоны. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🔊 Колонки беспроводные", "Добрый день!☀️ У меня вопрос по товару Колонки беспроводные. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("📡 Wifi и 4G роутеры", "Добрый день!☀️ У меня вопрос по товару Wifi и 4G роутеры. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🎥 Видеорегистраторы", "Добрый день!☀️ У меня вопрос по товару Видеорегистраторы. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🎧 Наушники беспроводные", "Добрый день!☀️ У меня вопрос по товару Наушники беспроводные. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🔦 Фонарики", "Добрый день!☀️ У меня вопрос по товару Фонарики. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("📱 Держатели для телефона", "Добрый день!☀️ У меня вопрос по товару Держатели для телефона. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("🛡️ Защитные стекла", "Добрый день!☀️ У меня вопрос по товару Защитные стекла. Пожалуйста, проконсультируйте меня по товару!😊"),
+    ("📦 Другие товары", "Добрый день!☀️ У меня вопрос по товару Вашего бренда. Пожалуйста, проконсультируйте меня по товару!😊"),
+]
+
+VIDEO_CATEGORIES = [
+    "⌚ Смарт часы",
+    "📹 Видеокамеры",
+    "🔋 ПЗУ (пуско-зарядное)",
+    "🎤 Петличные микрофоны",
+    "🔊 Колонки беспроводные",
+    "📡 Wifi и 4G роутеры",
+    "🎥 Видеорегистраторы",
+    "🎧 Наушники беспроводные",
+    "🔦 Налобные и ручные фонарики",
+    "📱 Держатели для телефона",
+    "🛡️ Защитные стекла",
+]
+
+IPHONE_ENDED_TEXT = """Конкурс завершён 🎉
+
+Спасибо всем, кто участвовал – вы сделали этот движ реально классным 🙌
+Но это не финал, а короткая пауза 😄
+
+В нашем Telegram-канале и чат-боте бренда будут новые конкурсы, розыгрыши и приятные призы для клиентов Wildberries 🎁✨
+
+Хотите участвовать и не пропускать анонсы? Тогда залетайте и подписывайтесь 👇
+👉 https://t.me/tofuraofficial
+
+Нажмите «Подписаться» ✅ и включите уведомления 🔔, чтобы первым узнавать про новые розыгрыши 😎"""
 
 SOCIAL_MEDIA = {
     "Instagram": "https://instagram.com/ваш_профиль",
@@ -352,6 +388,14 @@ def delete_social_media(name):
 
 init_db()
 
+try:
+    bot.set_my_commands([
+        BotCommand("start", "Главное меню"),
+        BotCommand("admin", "Админ-панель")
+    ])
+except:
+    pass
+
 # Функции для работы с настройками
 def get_setting(setting_name, default_value=""):
     try:
@@ -572,7 +616,8 @@ def main_menu():
         InlineKeyboardButton("📱 iPhone за отзыв", callback_data="iphone_giveaway")
     ]
     row4 = [
-        InlineKeyboardButton("🎓 Курс в подарок", callback_data="free_course")
+        InlineKeyboardButton("🎓 Курс в подарок", callback_data="free_course"),
+        InlineKeyboardButton("🎬 Видеоинструкции", callback_data="video_instructions")
     ]
     row5 = [
         InlineKeyboardButton("Мы на WB", callback_data="wb_categories")
@@ -700,9 +745,17 @@ def winner_keyboard():
     return keyboard
 
 def support_categories_keyboard():
-    keyboard = InlineKeyboardMarkup(row_width=1)
-    for category, link in SUPPORT_CATEGORIES.items():
-        keyboard.add(InlineKeyboardButton(category, url=link))
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    for i, (name, _) in enumerate(SUPPORT_CATEGORIES):
+        keyboard.add(InlineKeyboardButton(name, callback_data=f"support_cat_{i}"))
+    keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
+    return keyboard
+
+def video_instructions_keyboard():
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    for i, name in enumerate(VIDEO_CATEGORIES):
+        keyboard.add(InlineKeyboardButton(name, callback_data=f"video_cat_{i}"))
+    keyboard.add(InlineKeyboardButton("💬 Поддержка", callback_data="support"))
     keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
     return keyboard
 
@@ -966,6 +1019,41 @@ def handle_callback(call):
             keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
             edit_photo_message(chat_id, message_id, "course", text, keyboard)
 
+    elif call.data == "video_instructions":
+        answer_callback(call)
+        safe_edit_message(chat_id, message_id, "🎬 Видеоинструкции по товарам\n\nВыберите категорию:", video_instructions_keyboard())
+
+    elif call.data.startswith("video_cat_"):
+        answer_callback(call)
+        cat_index = int(call.data.replace("video_cat_", ""))
+        if 0 <= cat_index < len(VIDEO_CATEGORIES):
+            cat_name = VIDEO_CATEGORIES[cat_index]
+            video_url = get_setting(f'video_url_{cat_index}', '')
+            kb = InlineKeyboardMarkup()
+            if video_url:
+                kb.add(InlineKeyboardButton("▶️ Смотреть видео", url=video_url))
+            kb.add(InlineKeyboardButton("🔙 Назад", callback_data="video_instructions"))
+            text = f"🎬 {cat_name}\n\n"
+            if video_url:
+                text += "Нажмите кнопку ниже, чтобы посмотреть видеоинструкцию:"
+            else:
+                text += "Видеоинструкция скоро будет доступна!"
+            safe_edit_message(chat_id, message_id, text, kb)
+
+    elif call.data.startswith("support_cat_"):
+        answer_callback(call)
+        cat_index = int(call.data.replace("support_cat_", ""))
+        if 0 <= cat_index < len(SUPPORT_CATEGORIES):
+            cat_name, greeting = SUPPORT_CATEGORIES[cat_index]
+            kb = InlineKeyboardMarkup()
+            kb.add(InlineKeyboardButton("✉️ Написать в поддержку", url=SUPPORT_LINK))
+            kb.add(InlineKeyboardButton("🔙 Назад", callback_data="support"))
+            safe_edit_message(
+                chat_id, message_id,
+                f"💬 {cat_name}\n\n📝 Скопируйте и отправьте это сообщение в поддержку:\n\n{greeting}",
+                kb
+            )
+
     elif call.data == "wb_categories":
         text = "🛒 Выберите категорию товаров:"
         keyboard = InlineKeyboardMarkup(row_width=2)
@@ -979,15 +1067,15 @@ def handle_callback(call):
         )
         keyboard.add(
             InlineKeyboardButton("📱 Держатели для тел.", url="https://www.wildberries.ru/seller/4404517"),
-            InlineKeyboardButton("🎧 Наушники AirSan", url="https://www.wildberries.ru/seller/250069046")
+            InlineKeyboardButton("🎧 Наушники AirSan", url="https://www.wildberries.ru/seller/250093531")
         )
         keyboard.add(
             InlineKeyboardButton("🚗 Пуско-зарядные авто", url="https://www.wildberries.ru/seller/4404517"),
             InlineKeyboardButton("📹 Wi-Fi камеры", url="https://www.wildberries.ru/seller/250001961")
         )
         keyboard.add(
-            InlineKeyboardButton("⌚ Смарт часы", url="https://www.wildberries.ru/seller/250001961"),
-            InlineKeyboardButton("🛡️ Защитные стекла", url="https://www.wildberries.ru/seller/4404517")
+            InlineKeyboardButton("⌚ Смарт часы", url="https://www.wildberries.ru/seller/250069046"),
+            InlineKeyboardButton("🛡️ Защитные стекла", url="https://www.wildberries.ru/seller/250001961")
         )
         keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
         safe_edit_message(chat_id, message_id, text, keyboard)
@@ -1111,50 +1199,11 @@ def handle_callback(call):
     # Розыгрыш iPhone за отзыв (обновленный)
     elif call.data == "iphone_giveaway":
         answer_callback(call)
-        # Проверяем, участвует ли уже пользователь
-        cursor.execute("SELECT unique_id FROM iphone_participants WHERE user_id = ?", (user_id,))
-        existing = cursor.fetchone()
-        
-        iphone_instruction = get_setting('iphone_instruction', IPHONE_GIVEAWAY_INSTRUCTION)
-        copyable_format = get_setting('copyable_text', COPYABLE_TEXT)
-        
-        if existing:
-            # Показываем существующий ID
-            unique_id = existing[0]
-            # Формируем текст для копирования с Markdown
-            copy_text = copyable_format.format(text=f"Участвую в розыгрыше iPhone! ID: {unique_id}")
-            text = iphone_instruction.format(unique_id=unique_id, copy_text=copy_text)
-            text += "\n\n✅ Вы уже участвуете в розыгрыше!"
-        else:
-            # Генерируем новый уникальный ID
-            unique_id = f"IP{random.randint(10000, 99999)}{random.randint(100, 999)}"
-            
-            # Проверяем уникальность ID
-            while True:
-                cursor.execute("SELECT id FROM iphone_participants WHERE unique_id = ?", (unique_id,))
-                if not cursor.fetchone():
-                    break
-                unique_id = f"IP{random.randint(10000, 99999)}{random.randint(100, 999)}"
-            
-            # Сохраняем участника
-            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            cursor.execute(
-                "INSERT INTO iphone_participants (user_id, unique_id, participation_date, giveaway_id) VALUES (?, ?, ?, ?)",
-                (user_id, unique_id, now, 1)
-            )
-            conn.commit()
-            
-            # Формируем текст для копирования с Markdown
-            copy_text = copyable_format.format(text=f"Участвую в розыгрыше iPhone! ID: {unique_id}")
-            text = iphone_instruction.format(unique_id=unique_id, copy_text=copy_text)
-            text += "\n\n🎉 Вы успешно зарегистрированы в розыгрыше!"
-        
-        # Добавляем кнопку "Назад"
         keyboard = InlineKeyboardMarkup()
+        keyboard.add(InlineKeyboardButton("🏆 Победитель розыгрыша", url="https://t.me/tofuraofficial/32"))
+        keyboard.add(InlineKeyboardButton("📢 Наш канал", url="https://t.me/tofuraofficial"))
         keyboard.add(InlineKeyboardButton("🔙 Назад", callback_data="back"))
-        
-        # Отправляем с Markdown для форматирования текста
-        edit_photo_message(chat_id, message_id, 'iphone', text, keyboard, parse_mode="Markdown")
+        edit_photo_message(chat_id, message_id, 'iphone', IPHONE_ENDED_TEXT, keyboard)
     
     # Админские команды
     elif call.data == "admin_participants":
